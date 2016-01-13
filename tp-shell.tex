@@ -1,0 +1,121 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{amsfonts}            %For \leadsto
+\usepackage{amsmath}             %For \text
+\usepackage{fancybox}            %For \ovalbox
+
+\title{Travail pratique \#1}
+\author{IFT-2245}
+
+\begin{document}
+
+\maketitle
+
+{\centering \ovalbox{\large ¡¡ Dû le 28 janvier à 23h59 !!} \\}
+
+\newcommand \mML {\ensuremath\mu\textsl{ML}}
+\newcommand \kw [1] {\textsf{#1}}
+\newcommand \id [1] {\textsl{#1}}
+\newcommand \punc [1] {\kw{`#1'}}
+\newcommand \str [1] {\texttt{"#1"}}
+\newenvironment{outitemize}{
+  \begin{itemize}
+  \let \origitem \item \def \item {\origitem[]\hspace{-18pt}}
+}{
+  \end{itemize}
+}
+\newcommand \Align [2][t] {
+  \begin{array}[#1]{@{}l}
+    #2
+  \end{array}}
+
+\section{Survol}
+
+Ce TP vise à vous familiariser avec l'environnement de développement d'un
+système d'exploitation tel que Linux et les outils typiquement utilisés dans
+ce contexte.
+Les étapes de ce travail sont les suivantes:
+\begin{enumerate}
+\item Parfaire sa connaissance de C et Make et POSIX.
+\item Lire et comprendre cette donnée.  Cela prendra probablement une partie
+  importante du temps total.
+\item Lire, trouver, et comprendre les parties importantes du code fourni.
+\item Compléter le code fourni.
+\item Écrire un rapport.  Il doit décrire \textbf{votre} expérience pendant
+  les points précédents: problèmes rencontrés, surprises, choix que vous
+  avez dû faire, options que vous avez sciemment rejetées, etc...  Le
+  rapport ne doit pas excéder 5 pages.
+\end{enumerate}
+
+Ce travail est à faire en groupes de 2 étudiants.  Le rapport, au format
+\LaTeX\ exclusivement (compilable sur \texttt{frontal.iro}) et le code sont
+à remettre par remise électronique avant la date indiquée.  Aucun retard ne
+sera accepté.  Indiquez clairement votre nom au début de chaque fichier.
+
+Si un étudiant préfère travailler seul, libre à lui, mais l'évaluation de
+son travail n'en tiendra pas compte.  Si un étudiant ne trouve pas de
+partenaire, il doit me contacter au plus vite.  Des groupes de 3 ou plus
+sont \textbf{exclus}.
+
+\newpage
+\section{CH: un shell pour les hélvètes}
+
+Vous allez devoir implanter une ligne de commande, similaire
+à \texttt{/bin/sh}, qui sait:
+\begin{enumerate}
+\item Démarrer des processus externes: être capable d'exécuter des commandes
+  comme ``\texttt{cat Makefile}''.
+\item Expansion d'arguments: être capable d'exécuter des commandes comme
+  ``\texttt{echo *}''.
+\item Rediriger les entrées et sorties de ces processus: être capable
+  d'exécuter des commandes comme ``\texttt{cat <Makefile >foo}''.
+\item Connecter ces processus via des \emph{pipes} pour faire des
+  \emph{pipelines}: être capable d'exécuter des commandes comme
+  ``\texttt{find -name Makefile | xargs grep ch}''.
+\end{enumerate}
+
+Tout cela bien sûr sans réutiliser un autre shell mais en utilisant les
+primitives du système d'exploitation, telles que \texttt{exec},
+\texttt{fork}, \texttt{dup2}, \texttt{pipe}, \texttt{readdir}, ...
+
+Le programme doit être compilable et exécutable sur \texttt{frontal.iro}.
+Cela ne vous empêche pas bien sûr de le développer sur un système différent,
+e.g. sous Windows avec Cygwin, mais assurez-vous que le résultat fonctionne
+\emph{aussi} sur \texttt{frontal.iro}.
+
+\section{Cadeaux}
+
+Vous recevez en cadeau de bienvenue les fichiers \texttt{Makefile},
+\texttt{rapport.tex}, et \texttt{ch.c} qui contiennent le squelette (vide)
+du code et du rapport que vous devez rendre.
+
+\subsection{Remise}
+
+Pour la remise, vous devez remettre deux fichiers (\texttt{ch.c} et
+\texttt{rapport.tex}) par la page Moodle (aussi nommé StudiUM) du cours.
+Assurez-vous que tout compile correctement sur \texttt{frontal.iro}.
+
+\section{Détails}
+
+\begin{itemize}
+\item La note sera divisée comme suit: 20\% pour chacune des
+  4 fonctionalités, et 20\% pour le rapport.
+\item Tout usage de matériel (code ou texte) emprunté à quelqu'un d'autre
+  (trouvé sur le web, ...) doit être dûment mentionné, sans quoi cela sera
+  considéré comme du plagiat.
+\item Le code ne doit en aucun cas dépasser 80 colonnes.
+\item Vérifiez la page web du cours, pour d'éventuels errata, et d'autres
+  indications supplémentaires.
+\item La note est basée d'une part sur des tests automatiques, d'autre part
+  sur la lecture du code, ainsi que sur le rapport.  Le critère le plus
+  important, et que votre code doit se comporter de manière correcte.
+  Ensuite, vient la qualité du code: plus c'est simple, mieux c'est.
+  S'il y a beaucoup de commentaires, c'est généralement un symptôme que le
+  code n'est pas clair; mais bien sûr, sans commentaires le code (même
+  simple) et souvent incompréhensible.  L'efficacité de votre code est sans
+  importance, sauf s'il utilise un algorithme vraiment particulièrement
+  ridiculement inefficace.
+\end{itemize}
+
+\end{document}
