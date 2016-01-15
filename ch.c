@@ -4,6 +4,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Pour les tests.
+#define memcheck(x) if(x == NULL) {\
+                        printf("Mémoire epuisée.\n");\
+                        return NULL;\
+                    }
+
 /**
  *Writes the data from the stream "from" to a file named "filename".
  *If "filename" designates an already existing file, the file is overwritten.
@@ -61,6 +67,11 @@ int pipe(FILE* from, FILE* to){
   return EXIT_SUCCESS;
 }
 
+int execProgram(char* pgmName, char** args)
+{
+  return 0;
+}
+
 //int inputFrom(FILE* to, FILE* input
 
 int main (int argc, char* argv[])
@@ -70,11 +81,24 @@ int main (int argc, char* argv[])
   /* ¡REMPLIR-ICI! : Lire les commandes de l'utilisateur et les exécuter. */
   //int c;
   //int ret_code;
-  char buffer[255];
+  int bufferSize = 255;
+  char buffer[bufferSize];
+
   FILE* output = stdout;
-  FILE* input = (argc > 1)?fopen(argv[1], "r"):stdin;
-  while(fgets(buffer, 255, input) != NULL && strcmp(buffer,"quit\n") != 0){
-    fprintf(output, buffer);
+  FILE* input = (argc > 1) ? fopen(argv[1], "r") : stdin;
+
+  char* token;
+  while(fgets(buffer, sizeof(buffer), input) && strcmp(buffer,"quit\n") != 0)
+  {
+     /* get the first token */
+     token = strtok(buffer, " ");
+     
+     /* walk through other tokens */
+     while( token != NULL ) 
+     {
+        fprintf(output, "%s\n", token);
+        token = strtok(NULL, " ");
+     }
     fprintf (stdout, "%% ");
   }
 
