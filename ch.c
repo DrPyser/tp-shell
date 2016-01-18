@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 // Pour les tests.
 #define memcheck(x) if(x == NULL) {\
@@ -53,7 +55,7 @@ int appendToFile(FILE* from, char* filename){
   return EXIT_SUCCESS;
 }
 
-int pipe(FILE* from, FILE* to){
+int redirect(FILE* from, FILE* to){
   int c;
   int ret_code;
   while((c = fgetc(from)) != EOF){
@@ -67,37 +69,49 @@ int pipe(FILE* from, FILE* to){
   return EXIT_SUCCESS;
 }
 
-int execProgram(char* pgmName, char** args)
+int execProgram(char* pgmName, char* args[])
 {
-  return 0;
+  int retCode, status;
+  int pid = fork();
+  if(pid == -1)
+  {
+      printf("PID -- I do not recognise the meaning of this word! -Margaret Tatcher");
+      return -1;
+  }
+  if(pid == 0)
+    retCode = execvp(pgmName,args); //on execute la commande dans le child
+  else
+    waitpid(pid, &status,WUNTRACED); //on attend que le child finisse
+  return retCode;
 }
-
-//int inputFrom(FILE* to, FILE* input
 
 int main (int argc, char* argv[])
 {
   fprintf (stdout, "%% ");
 
-  /* ¡REMPLIR-ICI! : Lire les commandes de l'utilisateur et les exécuter. */
-  //int c;
-  //int ret_code;
   int bufferSize = 255;
   char buffer[bufferSize];
+  char* tokenInput;
 
   FILE* output = stdout;
   FILE* input = (argc > 1) ? fopen(argv[1], "r") : stdin;
 
-  char* token;
+/*  if (path == NULL)
+  {
+    printf("There's no such thing as path. Only families and individuals. -Margaret Tatcher");
+    return -1;
+  }*/
+
   while(fgets(buffer, sizeof(buffer), input) && strcmp(buffer,"quit\n") != 0)
   {
-     /* get the first token */
-     token = strtok(buffer, " ");
+     /* get the first tokenInput */
+     tokenInput = strtok(buffer, " ");
      
-     /* walk through other tokens */
-     while( token != NULL ) 
+     /* walk through other tokenInputs */
+     while( tokenInput != NULL ) 
      {
-        fprintf(output, "%s\n", token);
-        token = strtok(NULL, " ");
+        fprintf(output, "%s\n", tokenInput);
+        tokenInput = strtok(NULL, " ");
      }
     fprintf (stdout, "%% ");
   }

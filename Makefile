@@ -30,4 +30,4 @@ clean:
 # Règle simpliste pour générer le PDF à partir du source LaTeX.
 .tex.pdf:
 	$(PDFLATEX) $<
-
+	$(PDFLATEX) $<
