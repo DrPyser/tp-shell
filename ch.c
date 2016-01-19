@@ -7,10 +7,12 @@
 #include <unistd.h>
 
 // Pour les tests.
-#define memcheck(x) if(x == NULL) {\
-                        printf("Mémoire epuisée.\n");\
-                        return NULL;\
-                    }
+#define memcheck(x) do{\
+  if(x == NULL) {				\
+    fprintf(stderr, "Mémoire epuisée.\n");\
+    exit(1);\
+  }\
+  }while(0)
 
 /**
  *Writes the data from the stream "from" to a file named "filename".
@@ -75,7 +77,7 @@ int execProgram(char* pgmName, char* args[])
   int pid = fork();
   if(pid == -1)
   {
-      printf("PID -- I do not recognise the meaning of this word! -Margaret Tatcher");
+    fprintf(stderr, "PID -- I do not recognise the meaning of this word! -Margaret Tatcher");
       return -1;
   }
   if(pid == 0)
@@ -85,37 +87,89 @@ int execProgram(char* pgmName, char* args[])
   return retCode;
 }
 
+int countTokens(char* str, char sep){    
+  int i = 0;
+
+  while(i < strlen(str) && str[i] == sep)
+    i++;
+
+  if(i == strlen(str))
+    return 0;
+
+  int count = 1;
+  while(i < strlen(str)){
+    if(str[i++] == sep){
+      count++;
+      while(str[i] < strlen(str) && str[i++] == sep);
+    }
+  }
+  
+  return count;
+}
+
+/*
+char* strdup(char* str){
+  char* dup = malloc(strlen(str));
+  return strcpy(dup,str);
+}
+*/
+
 int main (int argc, char* argv[])
 {
+  //printf("%d\n", countTokens("1", ' '));
   fprintf (stdout, "%% ");
 
   int bufferSize = 255;
   char buffer[bufferSize];
   char* tokenInput;
+  //int c;
+  char* name;
+  char** args;
 
   FILE* output = stdout;
   FILE* input = (argc > 1) ? fopen(argv[1], "r") : stdin;
 
-/*  if (path == NULL)
+  /*  if (path == NULL)
   {
     printf("There's no such thing as path. Only families and individuals. -Margaret Tatcher");
     return -1;
-  }*/
+    }*/
 
-  while(fgets(buffer, sizeof(buffer), input) && strcmp(buffer,"quit\n") != 0)
-  {
-     /* get the first tokenInput */
-     tokenInput = strtok(buffer, " ");
-     
-     /* walk through other tokenInputs */
-     while( tokenInput != NULL ) 
-     {
-        fprintf(output, "%s\n", tokenInput);
-        tokenInput = strtok(NULL, " ");
-     }
-    fprintf (stdout, "%% ");
-  }
+  while(fgets(buffer, bufferSize, input) != NULL && strcmp(buffer,"quit\n") != 0)
+    {
+      
+      int i = 0;
 
+      args = malloc((countTokens(buffer,' ') + 1) * sizeof(char*));
+      memcheck(args);
+
+      //get the first token
+      tokenInput = strtok(buffer, " \n");
+      if(tokenInput != NULL){
+	name = strdup(tokenInput);
+	memcheck(name);
+	
+	//walk through other tokens
+	i = 0;
+	while( tokenInput != NULL ) 
+	  {	  
+	    //fprintf(stdout, "%s\n", tokenInput);
+	    args[i++] = strdup(tokenInput);
+	    tokenInput = strtok(NULL, " \n");
+	  }
+	args[i] = (char*) NULL;
+	execProgram(name,args);
+
+	free(name);
+	i = 0;
+	while(args[i] != NULL)
+	  free(args[i++]);
+	
+      }
+      fprintf(stdout,"%% ");          
+      
+    }
+  
   fprintf (stdout, "Bye!\n");
   exit (0);
 }

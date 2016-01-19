@@ -23,7 +23,7 @@ ch: ch.o
 	$(CC) $(CFLAGS) -c $<
 
 clean:
-	$(RM) *.o ch *.aux *.log *.pdf
+	$(RM) *.o ch *.aux *.log *.toc
 
 .SUFFIXES: .tex .pdf
 
