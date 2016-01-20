@@ -11,6 +11,8 @@
 //pour les directory
 #include <dirent.h>
 
+#include <signal.h>
+
 // Pour les tests.
 #define memcheck(x) do{\
   if(x == NULL) {       \
@@ -64,29 +66,54 @@ int appendToFile(FILE* from, char* filename) {
 
 int countFiles (char *path)
 {
-  return 0;
+
+  //taken from http://stackoverflow.com/questions/1121383/counting-the-number-of-files-in-a-directory-using-c
+  int file_count = 0;
+  DIR * dirp;
+  struct dirent * entry;
+
+  dirp = opendir(path); /* There should be error handling after this */
+  while ((entry = readdir(dirp)) != NULL) 
+  {
+    if (entry->d_type == DT_REG) { /* If the entry is a regular file */
+         file_count++;
+    }
+  }
+  closedir(dirp);
+  return file_count;
 }
 
-void argExpension(char *args[])
+void argExpension(char *args[], int *i)
 {
   char *pwd = getenv("PWD");
-  int i = 0;
+  *i = 0;
+  DIR *d;
+  struct dirent *dir;
+
   if(pwd == NULL)
   {
     fprintf(stderr, "Oh, but you know, you do not achieve anything without PWD, ever. -Margaret Tatcher");
     return;
   }
-  DIR *d;
-  struct dirent *dir;
+
+  int nbFiles = countFiles(pwd);
+  if((realloc(args, nbFiles*sizeof(char*))) == NULL)
+  {
+    fprintf(stderr, "%s\n", "My job is to stop Britain going to NULL pointers. -Margaret Tatcher");
+    return;
+  }
+
   d = opendir(pwd);
   if(d)
   {
    while((dir = readdir(d)) != NULL)
    {
-        args[i++] = strdup(dir->d_name);
+      if(dir->d_type == DT_REG) //ignore . and ..
+        args[(*i)++] = strdup(dir->d_name); 
    }
    closedir(d);
   }
+  args[*i] = (char*) NULL;
 }
 
 int redirect(FILE* from, FILE* to) {
@@ -106,7 +133,7 @@ int redirect(FILE* from, FILE* to) {
 int execProgram(char* pgmName, char* args[], int argCount)
 {
   int retCode, status;
-  int pid = fork();
+  pid_t pid = fork();
 
   
   // int redirectPosition = -1;
@@ -203,20 +230,19 @@ int main (int argc, char* argv[])
         tokenInput = strtok(NULL, " \n");
       }
       args[i] = (char*) NULL;
-
       if(strcmp(args[i-1], "*") == 0)
       {
-        argExpension(args);
+        argExpension(args, &i);
       }
-      execProgram(name, args, i-1);
 
+      execProgram(name, args, i-1);
       free(name);
       i = 0;
       while (args[i] != NULL)
         free(args[i++]);
 
     }
-    fprintf(stdout, "%% ");
+    fprintf(output, "%% ");
     free(args);
   }
 
