@@ -15,7 +15,7 @@ all: ch rapport.pdf #tp-shell.pdf
 
 # Comment construire "ch".
 ch: ch.o
-	$(LD) $(LDFLAGS) -o ch ch.o
+	$(LD) $(LDFLAGS) -g -o ch ch.o
 
 # Règle générique pour contruire un ".o" à partir d'un ".c".
 .SUFFIXES: .c .o
