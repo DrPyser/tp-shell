@@ -73,47 +73,51 @@ int countFiles (char *path)
   struct dirent * entry;
 
   dirp = opendir(path); /* There should be error handling after this */
-  while ((entry = readdir(dirp)) != NULL) 
+  while ((entry = readdir(dirp)) != NULL)
   {
     if (entry->d_type == DT_REG) { /* If the entry is a regular file */
-         file_count++;
+      file_count++;
     }
   }
   closedir(dirp);
   return file_count;
 }
 
-void argExpension(char *args[], int *i)
+void argExpension(char *args[])
 {
   char *pwd = getenv("PWD");
-  *i = 0;
+  int i = 0;
   DIR *d;
   struct dirent *dir;
 
-  if(pwd == NULL)
+  if (pwd == NULL)
   {
     fprintf(stderr, "Oh, but you know, you do not achieve anything without PWD, ever. -Margaret Tatcher");
     return;
   }
 
   int nbFiles = countFiles(pwd);
-  if((realloc(args, nbFiles*sizeof(char*))) == NULL)
+  if ((realloc(args, nbFiles * sizeof(char*))) == NULL)
   {
     fprintf(stderr, "%s\n", "My job is to stop Britain going to NULL pointers. -Margaret Tatcher");
     return;
   }
 
   d = opendir(pwd);
-  if(d)
+  if (d)
   {
-   while((dir = readdir(d)) != NULL)
-   {
-      if(dir->d_type == DT_REG) //ignore . and ..
-        args[(*i)++] = strdup(dir->d_name); 
-   }
-   closedir(d);
+    while ((dir = readdir(d)) != NULL)
+    {
+      if (dir->d_type == DT_REG) //ignore . and ..
+      {
+        if(args[i] != NULL)
+        args[i] = strdup(dir->d_name);
+        i++;
+      }
+    }
+    closedir(d);
   }
-  args[*i] = (char*) NULL;
+  args[i] = (char*) NULL;
 }
 
 int redirect(FILE* from, FILE* to) {
@@ -130,45 +134,21 @@ int redirect(FILE* from, FILE* to) {
   return EXIT_SUCCESS;
 }
 
-int execProgram(char* pgmName, char* args[], int argCount)
+int execProgram(char* pgmName, char* args[])
 {
   int retCode, status;
   pid_t pid = fork();
 
-  
-  // int redirectPosition = -1;
-  // char *last = args[argCount];
-  // char *beforeLast;
-  // char firstChar = last[0];
-  // char lastChar;
-
-  // if(argCount > 1)
-  // {
-  //   beforeLast = args[argCount-1];
-  //   lastChar = beforeLast[strlen(beforeLast)-1];
-
-  // }
-  // else
-  // {
-
-  // }
   if (pid == -1)
-   {
-     fprintf(stderr, "PID -- I do not recognise the meaning of this word! -Margaret Tatcher");
-     return -1;
-   }
-   if (pid == 0)
-   { //on execute la commande dans le child
-  //   switch(redirectPosition)
-  //   {
-  //     case 1:
-  //     case 2:
-  //     case 3:
-  //     default:
-         retCode = execvp(pgmName, args);
-    }
-   
-  // } 
+  {
+    fprintf(stderr, "PID -- I do not recognise the meaning of this word! -Margaret Tatcher");
+    return -1;
+  }
+  if (pid == 0)
+  { //on execute la commande dans le child
+    retCode = execvp(pgmName, args);
+  }
+
   else
     waitpid(pid, &status, WUNTRACED); //on attend que le child finisse
   return retCode;
@@ -230,14 +210,19 @@ int main (int argc, char* argv[])
         tokenInput = strtok(NULL, " \n");
       }
       args[i] = (char*) NULL;
-      if(strcmp(args[i-1], "*") == 0)
+      if (strcmp(args[i - 1], "*") == 0)
       {
-        argExpension(args, &i);
+        argExpension(args);
       }
-
-      execProgram(name, args, i-1);
+      printf("args after expansion\n");
+      for (i = 0; args[i] != NULL; i++)
+      {
+        printf("%s\n",args[i]);
+      }
+      execProgram(name, args);
       free(name);
       i = 0;
+      printf("AAAAAAAAAA");
       while (args[i] != NULL)
         free(args[i++]);
 
