@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <dirent.h>
 
 // Pour les tests.
 #define memcheck(x) do{					\
@@ -91,6 +92,7 @@ int execProgram(char* pgmName, char* args[])
     return retCode;
 }
 
+
 /** 
  * Read tokens into 'buffer' until a command-separating character, 
  * such as '|', '<', '>', ';' or '\n' and returns it.
@@ -124,6 +126,7 @@ int readCommand(FILE* src, char* buffer, int size){
 	buffer[i] = '\0';
 	return EOF;
     }
+    return -1;
 }
 
 int countTokens(char* str, char sep){    
@@ -140,6 +143,47 @@ int countTokens(char* str, char sep){
 }
 
 
+/*Counts the content of the directory given by 'path'.
+ *Ignores entities whose name begins with '.'
+ */
+int countDirectoryContent(char *path)
+{
+
+    //taken from http://stackoverflow.com/questions/1121383/counting-the-number-of-files-in-a-directory-using-c
+    int file_count = 0;
+    DIR * dirp;
+    struct dirent * entry;
+    
+    dirp = opendir(path); /* There should be error handling after this */
+    while ((entry = readdir(dirp)) != NULL) 
+	{
+      if(entry->d_name[0] != '.')
+	  file_count++;      
+	}
+    closedir(dirp);
+    return file_count;
+}
+
+
+/* Like 'countDirectoryContent' but includes entities beginning with '.'
+ */
+int countAllDirectoryContent(char *path)
+{
+
+  //taken from http://stackoverflow.com/questions/1121383/counting-the-number-of-files-in-a-directory-using-c
+  int file_count = 0;
+  DIR * dirp;
+  struct dirent * entry;
+
+  dirp = opendir(path); /* There should be error handling after this */
+  while ((entry = readdir(dirp)) != NULL) 
+  {
+      file_count++;
+  }
+  closedir(dirp);
+  return file_count;
+}
+
 /*
 http://stackoverflow.com/questions/8106765/using-strtok-in-c
 */
@@ -153,23 +197,37 @@ char** tokenize(const char* input)
     char* tok = strtok(str," "); 
 
     while(tok != NULL){
-        //if (count >= capacity)
-          //  result = realloc(result, (capacity*=2)*sizeof(*result));
-        result[count++] = (char*) (tok? strdup(tok) : tok);
+	//Si l'argument '*' est utilisé, on ajoute le contenu du dossier actuel
+	if(strcmp(tok, "*") == 0){
+	    capacity += countDirectoryContent(getenv("PWD"));
+	    result = realloc(result, capacity*sizeof(char*));
+	    DIR           *d;
+	    struct dirent *dir;
+	    d = opendir(".");
+	    if (d){
+		while((dir = readdir(d)) != NULL)
+		    {
+			if(dir->d_name[0] != '.')
+			    result[count++] = strdup(dir->d_name);			
+		    }
+		closedir(d);
+	    }
+	} else
+	    result[count++] = (char*) (tok? strdup(tok) : tok);
 	tok = strtok(NULL," ");
     }
     result[count] = (char*) tok;
-    free(str);
+    //free(str);
     return result;
 }
 
 /*Étant donné un string correspondant à une commande,
  *divise la commande en 'tokens' aux espaces, et exécute la commande dans un child process.
  */
-int parseAndRun(char* buffer){
+int parseAndRun(char* buffer){    
+    int retcode = 0;
     char** args;
     int i = 0;
-    int retcode = 0;  
 
     args = tokenize(buffer);
     if(args[0] != NULL){
@@ -180,9 +238,42 @@ int parseAndRun(char* buffer){
 	    i++;
 	}
     }
-    free(args);
+    //free(args);
     
     return retcode;
+}
+
+int execCommand(char* command)
+{
+    int retCode, status;
+    char** args;
+    int i;
+    int pid = fork();
+    if(pid == -1)
+	{
+	    fprintf(stderr, "PID -- I do not recognise the meaning of this word! -Margaret Tatcher");
+	    return -1;
+	}
+    if(pid == 0){
+	//Parse the command and expand the '*' argument 
+	args = tokenize(command);	
+	if(args[0] != NULL){
+	    retCode = execvp(args[0],args); //on execute la commande dans le child
+	    i = 0;
+	    while(args[i] != NULL){
+		//fprintf(stdout,"Freeing %s\n", args[i]);
+		free(args[i]);
+		i++;
+	    }
+	}
+
+	if(retCode == -1){
+	    raise(SIGTERM);//As a result of its failure, the child commits Seppuku
+	}
+    }
+    else
+	waitpid(pid, &status,WUNTRACED); //on attend que le child finisse
+    return retCode;
 }
 
 int main (int argc, char* argv[])
@@ -217,14 +308,14 @@ int main (int argc, char* argv[])
 	    quit = strcmp(buffer,"quit") == 0;    
 	    if(!quit){
 		printf("Buffer: %s\n", buffer);
-		parseAndRun(buffer);		
+		execCommand(buffer);		
 	    }
 	    break;
 	case '\n':
 	    quit = strcmp(buffer,"quit") == 0;    
 	    if(!quit){
 		printf("Buffer: %s\n", buffer);
-		parseAndRun(buffer);		
+		execCommand(buffer);//Parse and execute the command in a new child process		
 		fprintf(stdout,"%% ");          		
 	    }
 	    break;    
