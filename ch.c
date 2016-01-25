@@ -9,18 +9,15 @@
 #include <errno.h>
 
 // Pour les tests.
-#define memcheck(x) do{					\
-	if(x == NULL) {					\
-	    fprintf(stderr, "Mémoire epuisée.\n");	\
-	    exit(1);					\
-	}						\
+#define memcheck(x) do{         \
+  if(x == NULL) {         \
+      fprintf(stderr, "Mémoire epuisée.\n");  \
+      exit(1);          \
+  }           \
     }while(0)
 
-/**
- *Writes the data from the stream "from" to a file named "filename".
- *If "filename" designates an already existing file, the file is overwritten.
- *Otherwise, a new file is created.
- */
+#define FALSE 0
+#define TRUE 1
 
 int fpeekc(FILE* f){
     int c = fgetc(f);
@@ -121,7 +118,6 @@ int readCommand(FILE* src, char* buffer, int size){
 	}
 	c = fgetc(src);
     }
-
     //The buffer overflowed
     if(i >= size && feof(src) != 0){
 	fprintf(stderr, "Buffer overflow; Command too big.");
@@ -149,32 +145,7 @@ int countTokens(char* str, char sep){
     return count;
 }
 
-
-/*Counts the content of the directory given by 'path'.
- *Ignores entities whose name begins with '.'
- */
-int countDirectoryContent(char *path)
-{
-
-    //taken from http://stackoverflow.com/questions/1121383/counting-the-number-of-files-in-a-directory-using-c
-    int file_count = 0;
-    DIR * dirp;
-    struct dirent * entry;
-    
-    dirp = opendir(path); /* There should be error handling after this */
-    while ((entry = readdir(dirp)) != NULL) 
-	{
-      if(entry->d_name[0] != '.')
-	  file_count++;      
-	}
-    closedir(dirp);
-    return file_count;
-}
-
-
-/* Like 'countDirectoryContent' but includes entities beginning with '.'
- */
-int countAllDirectoryContent(char *path)
+int countDirectoryContent(char *path, int countAll)
 {
 
   //taken from http://stackoverflow.com/questions/1121383/counting-the-number-of-files-in-a-directory-using-c
@@ -182,12 +153,19 @@ int countAllDirectoryContent(char *path)
   DIR * dirp;
   struct dirent * entry;
 
-  dirp = opendir(path); /* There should be error handling after this */
-  while ((entry = readdir(dirp)) != NULL) 
+  dirp = opendir(path);
+  if (dirp)
   {
-      file_count++;
+    while ((entry = readdir(dirp)) != NULL)
+    {
+      if (entry->d_type == DT_REG)
+        file_count++;
+    }
+    closedir(dirp);
   }
-  closedir(dirp);
+  else
+    fprintf(stderr, "There's no such thing as a path. Only families and individuals. -Margaret Tatcher");
+
   return file_count;
 }
 
@@ -196,36 +174,36 @@ http://stackoverflow.com/questions/8106765/using-strtok-in-c
 */
 char** tokenize(const char* input)
 {
-    char* str = strdup(input);
-    int count = 0;
-    int capacity = countTokens(str,' ') + 1;
-    char** result = malloc(capacity*sizeof(char*));
+  char* str = strdup(input);
+  int count = 0;
+  int capacity = countTokens(str, ' ') + 1;
+  char** result = malloc(capacity * sizeof(char*));
 
-    char* tok = strtok(str," "); 
+  char* tok = strtok(str, " ");
 
-    while(tok != NULL){
-	//Si l'argument '*' est utilisé, on ajoute le contenu du dossier actuel
-	if(strcmp(tok, "*") == 0){
-	    capacity += countDirectoryContent(getenv("PWD"));
-	    result = realloc(result, capacity*sizeof(char*));
-	    DIR           *d;
-	    struct dirent *dir;
-	    d = opendir(".");
-	    if (d){
-		while((dir = readdir(d)) != NULL)
-		    {
-			if(dir->d_name[0] != '.')
-			    result[count++] = strdup(dir->d_name);			
-		    }
-		closedir(d);
-	    }
-	} else
-	    result[count++] = (char*) (tok? strdup(tok) : tok);
-	tok = strtok(NULL," ");
-    }
-    result[count] = (char*) tok;
-    //free(str);
-    return result;
+  while (tok != NULL) {
+    //Si l'argument '*' est utilisé, on ajoute aux arguments le contenu du dossier actuel
+    if (strcmp(tok, "*") == 0) {
+      capacity += countDirectoryContent(getenv("PWD"), FALSE);
+      result = realloc(result, capacity * sizeof(char*));
+      DIR           *d;
+      struct dirent *dir;
+      d = opendir(".");
+      if (d) {
+        while ((dir = readdir(d)) != NULL)
+        {
+          if (dir->d_name[0] != '.')
+            result[count++] = strdup(dir->d_name);
+        }
+        closedir(d);
+      }
+    } else
+      result[count++] = (char*) (tok ? strdup(tok) : tok);
+    tok = strtok(NULL, " ");
+  }
+  result[count] = (char*) tok;
+  free(str);
+  return result;
 }
 
 int execCommand(char* command)
@@ -271,9 +249,9 @@ int execCommand(char* command)
 
 int main (int argc, char* argv[])
 {
-    //printf("%d\n", countTokens(" 1 2 3", ' '));
-    fprintf (stdout, "%% ");
-
+    char cwd[1024];
+    getcwd(cwd,sizeof(cwd));
+    fprintf (stdout, "%s %%", cwd);
     int bufferSize = 255;
     char buffer[bufferSize];
     int quit = 0;//quit flag;
@@ -289,9 +267,9 @@ int main (int argc, char* argv[])
 	    break;    
 	case '|':
 	    /*
-	    pipe(fd);//Setting up pipelines for process
-	    dup2(0,fd[0]);
-	    dup2(1,fd[1]);
+	      pipe(fd);//Setting up pipelines for process
+	      dup2(0,fd[0]);
+	      dup2(1,fd[1]);
 	    */
 	case '>':
 	    //do redirection
@@ -300,7 +278,7 @@ int main (int argc, char* argv[])
 	    //char* badchars = "<";//charactères interdits dans le nom d'un fichier
 	    //if(c == '>'){
 	    //	readToken(stdin, filename, " ;|><\n", bufferSize);
-		//open file 'filename' in 'append' mode
+	    //open file 'filename' in 'append' mode
 	    //}
 	    break;
 	case '<':
