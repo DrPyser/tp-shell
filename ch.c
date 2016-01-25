@@ -6,6 +6,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <errno.h>
 
 // Pour les tests.
 #define memcheck(x) do{					\
@@ -20,86 +21,76 @@
  *If "filename" designates an already existing file, the file is overwritten.
  *Otherwise, a new file is created.
  */
-int outputToFile(FILE* from, char* filename){
-    FILE* output = fopen(filename, "w");
-    int c;
-    int ret_code;
-    while((c = fgetc(from)) != EOF){
-	ret_code = fputc(c,output);
-	if(ret_code == EOF){
-	    fprintf(stderr,"failure to write character %c in file %s", c, filename);
-	    fclose(output);
-	    return EXIT_FAILURE;
-	}
+
+int fpeekc(FILE* f){
+    int c = fgetc(f);
+    if(!feof(f)){
+	ungetc(c, f);
     }
-
-    fflush(output);
-    fclose(output);
-
-    return EXIT_SUCCESS;
+    return c;
 }
 
-int appendToFile(FILE* from, char* filename){
-    FILE* output = fopen(filename, "a");
-    int c;
-    int ret_code;
-    while((c = fgetc(from)) != EOF){
-	ret_code = fputc(c,output);
-	if(ret_code == EOF){
-	    fprintf(stderr,"failure to write character %c in file %s", c, filename);
-	    fclose(output);
-	    return EXIT_FAILURE;
-	}
-    }
-
-    fflush(output);
-    fclose(output);
-
-    return EXIT_SUCCESS;
-}
-
-int redirect(FILE* from, FILE* to){
-    int c;
-    int ret_code;
-    while((c = fgetc(from)) != EOF){
-	ret_code = fputc(c,to);
-	if(ret_code == EOF){
-	    fprintf(stderr,"failure to write character %c to output stream", c);
-	    return EXIT_FAILURE;
-	}
-    }
-    fflush(from);
-    return EXIT_SUCCESS;
-}
-
-int execProgram(char* pgmName, char* args[])
-{
-    int retCode, status;
-    int pid = fork();
-    if(pid == -1)
-	{
-	    fprintf(stderr, "PID -- I do not recognise the meaning of this word! -Margaret Tatcher");
-	    return -1;
-	}
-    if(pid == 0){
-	retCode = execvp(pgmName,args); //on execute la commande dans le child
-	if(retCode == -1){
-	    raise(SIGTERM);//As a result of its failure, the child commits Seppuku
-	}
-    }
+int cd(char* path){
+    int retCode;
+    if(path == NULL)
+	retCode = chdir(getenv("HOME"));
     else
-	waitpid(pid, &status,WUNTRACED); //on attend que le child finisse
+	retCode = chdir(path);
+
+    if(retCode < 0)
+      fprintf(stderr,"I don't think there will be a \"%s\" in my lifetime. -Margaret Tatcher\n",strerror(errno));
     return retCode;
 }
 
+int strmem(char* str, char c){
+    int i = 0;
+    int flag = 0;
+    while(i < strlen(str) && !flag){
+	flag = flag || str[i++] == c;
+    }
+    return flag;
+}
 
-/** 
- * Read tokens into 'buffer' until a command-separating character, 
- * such as '|', '<', '>', ';' or '\n' and returns it.
+/* Reads stream 'src' into 'buffer' until either 
+ * the end-of-file or a character in 'seps' is encountered, 
+ * or until 'buffer' is full(according to 'size').
+ */
+int readToken(FILE* src, char* buffer, char* seps, int size){
+    int i = 0;
+    int c;    
+    if(i < size){
+	while((c = fgetc(src)) != EOF && strmem(seps, c));
+	if(!feof(src)){
+	    do{
+		buffer[i++] = c;
+	    } while((c = fgetc(src)) != EOF && !strmem(seps, c) && i < size);
+	    if(i >= size){
+		fprintf(stderr, "Buffer overflow!");
+		return -2;
+	    }
+	    else if(strmem(seps, c)){
+		buffer[i] = '\0';
+		return c;
+	    }
+		
+	} else
+	    return EOF;	
+    }
+    else{
+	fprintf(stderr, "Buffer overflow!");
+	return -2;
+    }
+    return -1;
+}
+
+/* Reads a 'command'(a series of space-separated strings) into 'buffer' 
+ * until either a command-separating character(';','\n','|','>','<') or the end-of-input is encountered, 
+ * returning that character.
  */
 int readCommand(FILE* src, char* buffer, int size){
     int c;
     int i = 0;
+    char* home;
     while((c = fgetc(src)) == ' ');
     while(c != EOF && i < size){
 	switch(c){
@@ -111,6 +102,19 @@ int readCommand(FILE* src, char* buffer, int size){
 	    buffer[i] = '\0';
 	    return c;
 	    break;
+	case '~':
+	    home = getenv("HOME");
+	    if(strlen(home) < size-i-1){
+		int j = 0;
+		while(i < size && home[j] != '\0')
+		    buffer[i++] = home[j++];
+	    }
+	    else{
+		fprintf(stderr, "Buffer overflow.");
+		return -2;
+	    }
+	    break;
+		
 	default:
 	    buffer[i++] = c;
 	    break;
@@ -118,16 +122,19 @@ int readCommand(FILE* src, char* buffer, int size){
 	c = fgetc(src);
     }
 
+    //The buffer overflowed
     if(i >= size && feof(src) != 0){
 	fprintf(stderr, "Buffer overflow; Command too big.");
 	return -2;
     }
+    //encountered end-of-input
     else if(c == EOF){
 	buffer[i] = '\0';
 	return EOF;
     }
     return -1;
 }
+
 
 int countTokens(char* str, char sep){    
     int i = 0;
@@ -221,59 +228,45 @@ char** tokenize(const char* input)
     return result;
 }
 
-/*Étant donné un string correspondant à une commande,
- *divise la commande en 'tokens' aux espaces, et exécute la commande dans un child process.
- */
-int parseAndRun(char* buffer){    
-    int retcode = 0;
-    char** args;
-    int i = 0;
-
-    args = tokenize(buffer);
-    if(args[0] != NULL){
-	retcode = execProgram(args[0],args);
-	while(args[i] != NULL){
-	    //fprintf(stdout,"Freeing %s\n", args[i]);
-	    free(args[i]);
-	    i++;
-	}
-    }
-    //free(args);
-    
-    return retcode;
-}
-
 int execCommand(char* command)
 {
     int retCode, status;
-    char** args;
+    char** args = tokenize(command);	
     int i;
-    int pid = fork();
-    if(pid == -1)
-	{
-	    fprintf(stderr, "PID -- I do not recognise the meaning of this word! -Margaret Tatcher");
-	    return -1;
+    
+    if(args[0] != NULL){
+	if(strcmp(args[0],"cd") == 0){
+	    retCode = cd(args[1]);
+	    return retCode;
 	}
-    if(pid == 0){
-	//Parse the command and expand the '*' argument 
-	args = tokenize(command);	
-	if(args[0] != NULL){
-	    retCode = execvp(args[0],args); //on execute la commande dans le child
-	    i = 0;
-	    while(args[i] != NULL){
-		//fprintf(stdout,"Freeing %s\n", args[i]);
-		free(args[i]);
-		i++;
+	else{    
+	    int pid = fork();
+	
+	    if(pid == -1)
+		{
+		    fprintf(stderr, "PID -- I do not recognise the meaning of this word! -Margaret Tatcher");
+		    return -1;
+		}
+	    if(pid == 0){
+		//Parse the command and expand the '*' argument 	    
+	    
+		retCode = execvp(args[0],args); //on execute la commande dans le child
+		i = 0;
+		while(args[i] != NULL){
+		    //fprintf(stdout,"Freeing %s\n", args[i]);
+		    free(args[i]);
+		    i++;
+		}
+		if(retCode == -1)
+		    raise(SIGTERM);//As a result of its failure, the child commits Seppuku
 	    }
-	}
-
-	if(retCode == -1){
-	    raise(SIGTERM);//As a result of its failure, the child commits Seppuku
+	    else
+		waitpid(pid, &status,WUNTRACED); //on attend que le child finisse
+	    return retCode;
 	}
     }
     else
-	waitpid(pid, &status,WUNTRACED); //on attend que le child finisse
-    return retCode;
+	return -1;
 }
 
 int main (int argc, char* argv[])
@@ -302,6 +295,14 @@ int main (int argc, char* argv[])
 	    */
 	case '>':
 	    //do redirection
+	    //char filename[bufferSize];
+	    //int c = fpeekc(stdin);
+	    //char* badchars = "<";//charactères interdits dans le nom d'un fichier
+	    //if(c == '>'){
+	    //	readToken(stdin, filename, " ;|><\n", bufferSize);
+		//open file 'filename' in 'append' mode
+	    //}
+	    break;
 	case '<':
 	    //same
 	case ';':
