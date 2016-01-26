@@ -307,7 +307,7 @@ int main (int argc, char* argv[])
                     break;
                 case '<':
                     //same
-                    readToken(stdin,filename," ;\n<>|",bufferSize);
+                    flag = readToken(stdin,filename," ;\n<>|",bufferSize);
                     in = fileno(fopen(filename,"r"));
                     break;
                 case ';':
