@@ -138,9 +138,9 @@
 			Notre shell commence par éliminer tous les espace au début de la commande, s'il y en a. Ensuite, on lit charactère par charactère jusqu'à ce qu'un caractère spécial soit atteint. Ces charactères sont le retour à la ligne, les opérateurs de redirection, de pipe, un espace ou la fin du fichier (\textit{EOF}).
 			
 			\subsubsection{Commandes externes}
-			aaaaaaaaaa
+			L'utilisation de execvp blablabla...
 			\subsubsection{Commandes internes}
-			aaaaaaaaaa
+				Par manque de temps, les seules commandes internes qui sont gérées par notre shell sont 'cd' et 'quit'. La deuxième ayant été expliquée plus haut, nous allons ici discuter du comportement de la première. 'cd' se comporte comme nous sommes habitués, à l'exception de la gestion du '~'. En effet, il est possible de faire 'cd' et toutes ses variations définies dans la plupart des terminaux Linux, mais les variations comme \textit{cd ~/machin} ne sont pas gérées. Il est possible d'utiliser \textit{cd -} pour revenir au dossier précédent.
 		\subsection{Gestion des erreurs}
 			Les messages d'erreurs sont des citations inspirées de Margaret Tatcher. Même si cela peut paraître ridicule, les messages
 		d'erreurs sont quand même descriptifs du problème qui c'est produit. On arrive sans problème à comprendre ce qui c'est passé. Par exemple, si on entre une commande qui n'existe pas, le shell nous répondra «There's no such thing as <command>. Only families and individuals.» où <command> sera le nom de la commande entrée.
