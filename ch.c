@@ -20,6 +20,7 @@
 #define FALSE 0
 #define TRUE 1
 pid_t global_pid = -1;//The pid of the current process
+char last_directory_visited[1024];
 
 int fpeekc(FILE* f) {
     int c = fgetc(f);
@@ -31,11 +32,14 @@ int fpeekc(FILE* f) {
 
 int cd(char* path) {
     int retCode;
+    char* last = strdup(last_directory_visited);
+    getcwd(last_directory_visited, 1024);
     if (path == NULL)
         retCode = chdir(getenv("HOME"));
+    else if (strcmp(path, "-") == 0)
+        retCode = chdir(last);
     else
         retCode = chdir(path);
-
     if (retCode < 0)
         fprintf(stderr, "I don't think there will be a \"%s\" in my lifetime. -Margaret Tatcher\n", strerror(errno));
     return retCode;
@@ -277,6 +281,7 @@ int main (int argc, char* argv[])
 {
     char cwd[1024];
     getcwd(cwd, sizeof(cwd));
+    strcpy(last_directory_visited, cwd);
     fprintf (stdout, "%s %% ", cwd);
 
     int bufferSize = 1024;
@@ -300,10 +305,6 @@ int main (int argc, char* argv[])
             //printf("Buffer: %s\n", buffer);
             args = tokenize(buffer);
             if (args[0] != NULL) {
-                /*                 = 0;
-                                while(args[i] != NULL)
-                                  printf("%s\n",args[i++]);
-                */
                 switch (flag) {
                 case EOF:
                     quit = 1;
@@ -353,9 +354,9 @@ int main (int argc, char* argv[])
                     case '\n':
                         out = 1;
                         in = 0;
-                        fflush(stdout);
                         getcwd(cwd, sizeof(cwd));
-                        fprintf (stdout, "%s%% ", cwd);
+                        fflush(stdout);
+                        fprintf(stdout, "%s %% ",cwd);
                         break;
                     default:
                         out = 1;
@@ -371,10 +372,10 @@ int main (int argc, char* argv[])
                 }
             }
             else if (flag != '\n') {
-                fprintf(stderr, "Syntax error: unexpected token \"%c\"\n", flag); t
+                fprintf(stderr, "Syntax error: unexpected token \"%c\"\n", flag);
             }
             else
-                fprintf(stdout, "%s %%", cwd);
+                fprintf(stdout, "%s %% ",cwd);
 
         }
     }
