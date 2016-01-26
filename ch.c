@@ -20,6 +20,7 @@
 #define FALSE 0
 #define TRUE 1
 pid_t global_pid = -1;//The pid of the current process
+char last_directory_visited[1024];
 
 int fpeekc(FILE* f){
     int c = fgetc(f);
@@ -31,11 +32,14 @@ int fpeekc(FILE* f){
 
 int cd(char* path){
     int retCode;
-    if(path == NULL)
+    char* last = strdup(last_directory_visited);
+    getcwd(last_directory_visited,1024);
+    if(path == NULL)        
         retCode = chdir(getenv("HOME"));
+    else if(strcmp(path, "-") == 0)
+        retCode = chdir(last);
     else
         retCode = chdir(path);
-
     if(retCode < 0)
         fprintf(stderr,"I don't think there will be a \"%s\" in my lifetime. -Margaret Tatcher\n",strerror(errno));
     return retCode;
@@ -277,6 +281,7 @@ int main (int argc, char* argv[])
 {
     char cwd[1024];
     getcwd(cwd,sizeof(cwd));
+    strcpy(cwd, last_directory_visited);
     fprintf (stdout, "%s\n%% ", cwd);
     int bufferSize = 1024;
     char buffer[bufferSize];//Buffer used to read a command
@@ -288,7 +293,7 @@ int main (int argc, char* argv[])
     int out = 1;//output file descriptor
     char** args;//tokenized command
     char* mode;//file open mode for redirection("a" or "w")
-    int i;//Used for iterating through arguments
+    int i;//Used for iterating through arguments    
     signal(SIGINT, interrupt_signal_handler);    
     while(!quit){
         pipe(fd);//Setting up pipelines for processes communication
