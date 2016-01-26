@@ -8,7 +8,7 @@ CFLAGS=-Wall
 CC=cc
 LD=cc
 RM=rm -f
-PDFLATEX=pdflatex
+LATEXMK=latexmk -pdf
 
 # Point d'entrée principal
 all: ch rapport.pdf #tp-shell.pdf
@@ -29,5 +29,4 @@ clean:
 
 # Règle simpliste pour générer le PDF à partir du source LaTeX.
 .tex.pdf:
-	$(PDFLATEX) $<
-	$(PDFLATEX) $<
+	$(LATEXMK) $<
