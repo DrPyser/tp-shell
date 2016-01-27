@@ -277,7 +277,6 @@ int main (int argc, char* argv[])
     getcwd(cwd, sizeof(cwd));
     strcpy(last_directory_visited, cwd);
     fprintf (stdout, "%s %% ", cwd);
-
     int bufferSize = 1024;
     char buffer[bufferSize];//Buffer used to read a command
     char filename[bufferSize];//buffer used to read a filename for a redirection
