@@ -1,5 +1,7 @@
 /* ch.c --- Un shell pour les hélvètes.  */
-
+/**
+Fait par Charles Langlois et François Poitras
+*/
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,16 +11,9 @@
 #include <errno.h>
 #include <fcntl.h>
 
-// Pour les tests.
-#define memcheck(x) do{                             \
-        if(x == NULL) {                             \
-            fprintf(stderr, "Mémoire epuisée.\n");    \
-            exit(1);                                \
-        }                                           \
-    }while(0)
-
 #define FALSE 0
 #define TRUE 1
+
 pid_t global_pid = -1;//The pid of the current process
 char last_directory_visited[1024];
 
@@ -69,7 +64,7 @@ int readToken(FILE* src, char* buffer, char* seps, int size) {
                 buffer[i++] = c;
             } while ((c = fgetc(src)) != EOF && c != 3 && !strmem(seps, c) && i < size);
             if (i >= size) {
-                fprintf(stderr, "Buffer overflow!\n");
+                fprintf(stderr, "I like buffer overflows. We can do business together. -Margaret Tatcher\n");
                 return -2;
             }
             else if (c == 3) {
@@ -85,7 +80,7 @@ int readToken(FILE* src, char* buffer, char* seps, int size) {
             return EOF;
     }
     else {
-        fprintf(stderr, "Buffer overflow!\n");
+        fprintf(stderr, "I like buffer overflows. We can do business together. -Margaret Tatcher\n");
         return -2;
     }
     return -1;
@@ -125,7 +120,7 @@ int readCommand(FILE* src, char* buffer, int size) {
                     buffer[i++] = home[j++];
             }
             else {
-                fprintf(stderr, "Buffer overflow.\n");
+                fprintf(stderr, "I like buffer overflows. We can do business together. -Margaret Tatcher\n");
                 return -2;
             }
             break;
@@ -138,7 +133,7 @@ int readCommand(FILE* src, char* buffer, int size) {
     }
     //The buffer overflowed
     if (i >= size) {
-        fprintf(stderr, "Buffer overflow.\n");
+        fprintf(stderr, "I like buffer overflows. We can do business together. -Margaret Tatcher\n");
         return -2;
     }
     //encountered end-of-input
@@ -165,7 +160,7 @@ int countTokens(char* str, char sep) {
 /* compte le nombre d'entités contenu par le dossier désigné par "path" */
 int countDirectoryContent(char *path)
 {
-    //taken from http://stackoverflow.com/questions/1121383/counting-the-number-of-files-in-a-directory-using-c
+    //adapted from http://stackoverflow.com/questions/1121383/counting-the-number-of-files-in-a-directory-using-c
     int file_count = 0;
     DIR * dirp;
     struct dirent * entry;
@@ -181,13 +176,13 @@ int countDirectoryContent(char *path)
         closedir(dirp);
     }
     else
-        fprintf(stderr, "There's no such thing as a path. Only families and individuals. -Margaret Tatcher\n");
+        fprintf(stderr, "No-one would remember the Good Samaritan if he'd only had good intentions; he had the path as well.  -Margaret Tatcher\n");
 
     return file_count;
 }
 
 /*
-  http://stackoverflow.com/questions/8106765/using-strtok-in-c
+  Adapted from http://stackoverflow.com/questions/8106765/using-strtok-in-c
   Sépare le string reçu en entré aux espaces, et retourne un pointeur vers un array contenant les strings résultants
 */
 char** tokenize(const char* input)
@@ -260,7 +255,6 @@ int execCommand(char** args, int in, int out)
             }
         }
         else {
-            //if(out == 1)//Si le output n'est pas stdout, le prochain processus sera directement exécuté
             waitpid(pid, &status, WUNTRACED); //on attend que le child finisse
             if (WIFEXITED(status))
                 return WEXITSTATUS(status);
@@ -302,7 +296,6 @@ int main (int argc, char* argv[])
         flag = readCommand(stdin, buffer, bufferSize);//lit une commande
         quit = feof(stdin) || strcmp(buffer, "quit") == 0;
         if (!quit) {
-            //printf("Buffer: %s\n", buffer);
             args = tokenize(buffer);
             if (args[0] != NULL) {
                 switch (flag) {
@@ -310,8 +303,6 @@ int main (int argc, char* argv[])
                     quit = 1;
                     break;
                 case -2:
-                    //Do something?
-
                     break;
                 case '|':
                     out = fd[1];
@@ -342,7 +333,7 @@ int main (int argc, char* argv[])
                 }
                 if (!quit) {
                     if (execCommand(args, in, out) == ENOENT) {
-                        fprintf(stderr, "Unknown command \"%s\"\n", args[0]);
+                        fprintf(stderr, "There's no such thing as \"%s\". Only families and individuals. -Margaret Tatcher.\n", args[0]);
                     }
                     //fprintf(stdout,"code after exec: %d\n", errno);
                     switch (flag) {
@@ -372,7 +363,8 @@ int main (int argc, char* argv[])
                 }
             }
             else if (flag != '\n') {
-                fprintf(stderr, "Syntax error: unexpected token \"%c\"\n", flag);
+                fprintf(stderr, "In my lifetime all our problems have come from mainland Europe \
+                                and all the solutions have come from the unexpected \"%c\" across the world. -Margaret Tatcher", flag);
             }
             else
                 fprintf(stdout, "%s %% ",cwd);
