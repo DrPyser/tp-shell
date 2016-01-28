@@ -54,15 +54,16 @@ int strmem(char* str, char c) {
  * the end-of-file or a character in 'seps' is encountered,
  * or until 'buffer' is full(according to 'size').
  */
-int readToken(FILE* src, char* buffer, char* seps, int size) {
+int readToken(FILE* src, char* buffer, int size) {
     int i = 0;
     int c;
+    char* delimiters = " |;<>\n";
     if (i < size) {
-        while ((c = fgetc(src)) != EOF && c != 3 && strmem(seps, c));
+        while ((c = fgetc(src)) != EOF && c != 3 && strmem(delimiters, c));
         if (!feof(src)) {
             do {
                 buffer[i++] = c;
-            } while ((c = fgetc(src)) != EOF && c != 3 && !strmem(seps, c) && i < size);
+            } while ((c = fgetc(src)) != EOF && c != 3 && !strmem(delimiters, c) && i < size);
             if (i >= size) {
                 fprintf(stderr, "I like buffer overflows. We can do business together. -Margaret Tatcher\n");
                 return -2;
@@ -71,7 +72,9 @@ int readToken(FILE* src, char* buffer, char* seps, int size) {
                 buffer[0] = '\0';
                 return c;
             }
-            else if (strmem(seps, c)) {
+            else if (strmem(delimiters, c)) {
+                while(c == ' ' && !feof(src) && strmem(delimiters,fpeekc(src)))
+                    c = fgetc(src);
                 buffer[i] = '\0';
                 return c;
             }
@@ -176,7 +179,7 @@ int countDirectoryContent(char *path)
         closedir(dirp);
     }
     else
-        fprintf(stderr, "No-one would remember the Good Samaritan if he'd only had good intentions; he had the path as well.  -Margaret Tatcher\n");
+        fprintf(stderr, "No one would remember the Good Samaritan if he'd only had good intentions; he had the path as well.  -Margaret Tatcher\n");
 
     return file_count;
 }
@@ -280,95 +283,129 @@ int main (int argc, char* argv[])
     int bufferSize = 1024;
     char buffer[bufferSize];//Buffer used to read a command
     char filename[bufferSize];//buffer used to read a filename for a redirection
-    int quit = 0;//quit flag. If = 1, the program will exit the read-execute loop and terminate
+    int quit = FALSE;//quit flag. If = 1, the program will exit the read-execute loop and terminate
+    int execute = FALSE;//skip flag. If true(1), the command will be executed directly.
+    int abort = FALSE;//skip flag. If true(1), the command will not be executed.
     int flag;//flag returned by "readCommand" indicating the delimiter character terminating the command, or an error code
     int fd[2];//pipes
     int in = 0;//input file descriptor
     int out = 1;//output file descriptor
     char** args;//tokenized command
     char* mode;//file open mode for redirection("a" or "w")
+    FILE* fileptr;
     int i;//Used for iterating through arguments
 
     signal(SIGINT, interrupt_signal_handler);
     while (!quit) {
+        execute = FALSE;
+        abort = FALSE;
+        //reads a command, up until end of line or command separating character('|',';')
         pipe(fd);//Setting up pipelines for processes communication
-        flag = readCommand(stdin, buffer, bufferSize);//lit une commande
+        flag = readCommand(stdin, buffer, bufferSize);//lit une commande jusqu'à
+        out = 1;
         quit = feof(stdin) || strcmp(buffer, "quit") == 0;
-        if (!quit) {
-            args = tokenize(buffer);
-            if (args[0] != NULL) {
+        args = tokenize(buffer);
+        if (!quit && args[0] == NULL){
+            if (flag != '\n'){
+                fprintf(stderr, "In my lifetime all our problems have come from mainland Europe\
+ and all the solutions have come from the unexpected \"%c\" across the world. -Margaret Tatcher\n", flag);
+                while(!feof(stdin) && fgetc(stdin) != '\n'); 
+            }
+            fprintf(stdout, "%s %% ",cwd);
+        }
+        else if (!quit){
+            //reads a command, up until end of line or command separating character('|',';')
+            //fprintf(stdout,"Buffer content: \"%s\"\nflag: %c\n", buffer, flag);
+            while(!(execute || abort)){                
                 switch (flag) {
                 case EOF:
-                    quit = 1;
+                    quit = TRUE;
+                    abort = TRUE;
                     break;
                 case -2:
+                    //Buffer overflow
                     break;
                 case '|':
+                    //Piping
                     out = fd[1];
+                    execute = TRUE;
                     break;
                 case '>':
-                    //do redirection
+                    //output redirection
                     if (fpeekc(stdin) == '>') {
                         fgetc(stdin);
                         mode = "a";
                     }
                     else
-                        mode = "w";
-                    flag = readToken(stdin, filename, " ;\n<>|", bufferSize);
-                    out = fileno(fopen(filename, mode));
-                    //Exécute la commande avec le file descriptor du fichier comme output
+                        mode =  "w";
+                    
+                    flag = readToken(stdin, filename, bufferSize);
+                    //fprintf(stdout, "Filename: %s\n", filename);
+                    fileptr = fopen(filename,mode);
+                    if(fileptr != NULL)
+                        out = fileno(fileptr);
+                    else {
+                        fprintf(stderr,"File access error: cannot write to file \'%s\'\n",filename);
+                        abort = TRUE;
+                    }
                     break;
                 case '<':
-                    //same
-                    flag = readToken(stdin, filename, " ;\n<>|", bufferSize);
-                    in = fileno(fopen(filename, "r"));
+                    //input redirection
+                    flag = readToken(stdin, filename, bufferSize);
+                    //fprintf(stdout, "Filename: %s\n", filename);
+                    if(access(filename,R_OK) != -1){
+                        in = fileno(fopen(filename, "r"));
+                    } else{
+                        fprintf(stderr,"Fichier inexistant/problème d'accès de fichier.\n");
+                        abort = TRUE;
+                    }
                     break;
                 case ';':
                 case '\n':
-                    out = 1;
+                    //out = 1;
+                    execute = TRUE;
                     break;
                 case 3:
+                    abort = TRUE;
                     break;
                 }
-                if (!quit) {
-                    if (execCommand(args, in, out) == ENOENT) {
-                        fprintf(stderr, "There's no such thing as \"%s\". Only families and individuals. -Margaret Tatcher.\n", args[0]);
-                    }
-                    //fprintf(stdout,"code after exec: %d\n", errno);
-                    switch (flag) {
-                    case '|':
-                        close(fd[1]);
-                        in = fd[0];
-                        break;
-                    case 3:
-                    case '\n':
-                        out = 1;
-                        in = 0;
-                        getcwd(cwd, sizeof(cwd));
-                        fflush(stdout);
-                        fprintf(stdout, "%s %% ",cwd);
-                        break;
-                    default:
-                        out = 1;
-                        in = 0;
-                        break;
-                    }
-                }
-                i = 0;
-                while (args[i] != NULL) {
-                    //fprintf(stdout,"Freeing %s\n", args[i]);
-                    free(args[i]);
-                    i++;
+            }
+            if (!(quit || abort)) {
+                //fprintf(stdout,"Buffer content: %s\n", buffer);
+                if (execCommand(args, in, out) == ENOENT) {
+                    fprintf(stderr, "There's no such thing as \"%s\". Only families and individuals. -Margaret Tatcher.\n", args[0]);
                 }
             }
-            else if (flag != '\n') {
-                fprintf(stderr, "In my lifetime all our problems have come from mainland Europe \
-                                and all the solutions have come from the unexpected \"%c\" across the world. -Margaret Tatcher", flag);
+            if(!quit){
+                //After command execution
+                switch (flag) {
+                case '|':
+                    close(fd[1]);
+                    in = fd[0];
+                    break;
+                case 3:
+                case '\n':
+                    out = 1;
+                    in = 0;
+                    getcwd(cwd, sizeof(cwd));
+                    fflush(stdout);
+                    fprintf(stdout, "%s %% ",cwd);
+                    break;
+                default:
+                    out = 1;
+                    in = 0;
+                    break;
+                }
             }
-            else
-                fprintf(stdout, "%s %% ",cwd);
-
+            i = 0;
+            while (args[i] != NULL) {
+                //fprintf(stdout,"Freeing %s\n", args[i]);
+                free(args[i]);
+                i++;
+            }
         }
+        else
+            fprintf(stdout,"Quitting\n");
     }
     close(fd[0]);
     close(fd[1]);
