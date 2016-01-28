@@ -173,8 +173,11 @@ int countDirectoryContent(char *path)
     {
         while ((entry = readdir(dirp)) != NULL)
         {
-            if (entry->d_type == DT_REG)
+            if (entry->d_name[0] != '.'){
+                //fprintf(stdout,"entry: %s\n", entry->d_name);
                 file_count++;
+            }
+            //fprintf(stdout,"entry: %s\n", entry->d_name);
         }
         closedir(dirp);
     }
@@ -200,7 +203,13 @@ char** tokenize(const char* input)
     while (tok != NULL) {
         //Si l'argument '*' est utilisé, on ajoute aux arguments le contenu du dossier actuel
         if (strcmp(tok, "*") == 0) {
-            capacity += countDirectoryContent(getenv("PWD"));
+            char cwd[258];
+            if(getcwd(cwd,258) != NULL){
+                fprintf(stdout, "Current directory content: %d\n", countDirectoryContent(cwd));
+                capacity += countDirectoryContent(cwd);                
+            }
+            else
+                fprintf(stderr, "current directory path too big.\n");
             result = realloc(result, capacity * sizeof(char*));
             DIR           *d;
             struct dirent *dir;

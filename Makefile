@@ -12,7 +12,7 @@ PDFLATEX=pdflatex
 
 # Point d'entrée principal
 all: ch rapport.pdf #tp-shell.pdf
-
+rapport: rapport.pdf
 # Comment construire "ch".
 ch: ch.o
 	$(LD) $(LDFLAGS) -o ch ch.o
@@ -23,7 +23,7 @@ ch: ch.o
 	$(CC) $(CFLAGS) -g -c $<
 
 clean:
-	$(RM) *.o ch *.aux *.log *.toc *.out *~ \#*\#
+	$(RM) *.o ch *.aux *.log *.toc *.out *~ \#*\# *.pdf
 
 .SUFFIXES: .tex .pdf
 
