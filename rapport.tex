@@ -45,7 +45,7 @@
 	\renewcommand{\floatpagefraction}{0.7}
 
 % Enable hyperlinks
-	\usepackage[pdfborder=000,pdftex=true]{hyperref}
+	\usepackage[pdftex=true]{hyperref}
 	
 % Table layout
 	\usepackage{booktabs}
@@ -133,18 +133,18 @@
 	\newpage
 
 	\section{Fonctionnement du shell}
-			Le programme démarre en affichant le répertoire de travail courant, qui correspond au répertoire d'où a été exécuté le programme \textit{ch}. À partir de ce point, toutes les commandes disponibles dans les dossiers présent dans la variable d'environnement \textit{PATH} peuvent êtres éxecutées. Il est aussi possible de rediriger la sortie ou l'entrée d'une commande en utilisant le symbole '>' ou '<', comme dans la plupart des terminaux unix. De la même façon, l'usager peut transmettre la sortie d'une commande à une autre en utlisant des \textit{pipes} dénotés par le symbole '|' entre les commandes, ainsi qu'enchainer plusieurs commandes sur une même ligne en les séparant par des point-virgules(';'); 
+			Le programme démarre en affichant le répertoire de travail courant, qui correspond au répertoire d'où a été exécuté le programme \textit{ch}. À partir de ce point, toutes les commandes disponibles dans les dossiers présent dans la variable d'environnement \textit{PATH} peuvent êtres éxecutées. Il est aussi possible de rediriger la sortie ou l'entrée d'une commande en utilisant le symbole '>' ou '<', comme dans la plupart des terminaux Unix. De la même façon, l'usager peut transmettre la sortie d'une commande à une autre en utlisant des \textit{pipes} dénotés par le symbole '|' entre les commandes, ainsi qu'enchainer plusieurs commandes sur une même ligne en les séparant par des point-virgules(';'); 
 
 			Il est possible d'utiliser une astérisque pour faire référence à l'ensemble des fichiers et dossiers du répertoire courant dont le nom ne commence pas par '.'(excluant donc les dossiers symboliques ``.'' et ``..''. Par exemple, la commande \textit{echo *} affichera le nom de tous les fichiers et dossiers du répertoire courant. L'utilisateur peut en tout tempsquitter le programme en utilisant la commande \textit{quit} ou encore en envoyant le signal de fin de fichier(end-of-file) par CTRL-D.
 
 		    \subsection{Traitement de l'entrée}
             La lecture de l'entré se fait commande par commande, dans une boucle itérative de style \textit{read-execute-print}.
             
-            Une commande est délimité par les caractères ';','|' et '\textbackslash n'(fin de ligne).
+            Une commande est délimité par les caractères ';' ,'|' et '\textbackslash n'(fin de ligne).
             
             La lecture d'une commande se fait par la fonction \textit{readCommand}, qui lit une série de 'jetons'(une séquence de caractères séparé par des espaces) jusqu'à rencontrer un des caractères délimiteurs.
             Une fois la commande lue et stockée dans un buffer, elle est divisée en ses \textit{jetons} constituants. Ce processus élimine les espaces au début et à la fin de la commande.
-            Si la commande lue est ``quit'', le reste du traitement est sauté, le reste de la ligne est ignorée, la boucle est intérompu et l'exécution du \textit{shell} se termine
+            Si la commande lue est ``quit'', le reste du traitement est sauté, le reste de la ligne est ignorée, la boucle est intérompue et l'exécution du \textit{shell} se termine
             Si la liste de jetons est vide, le reste du traitement est sauté, le reste de la ligne est ignoré, l'invite de commande(``path\%\%'' ) et une nouvelle commande est attendue.                        
             Sinon, si le caractère délimitant la commande est ';' ou '\textbackslash n', la commande est exécutée, avec les entré et sortie précédemment désignées(par défaut, ceux-ci correspondent aux \textit{file descriptors} '0' et '1', correspondant au \textit{stdin} et \textit{stdout}).
             Si le caractère délimitant est plutôt un caractère de redirection('<','>'), le prochain jeton lu devrait être un nom de fichier, et l'entré('<') ou la sortie('>') est changée pour un descripteur de fichier correspondant à ce fichier.
@@ -171,11 +171,19 @@
 	        \section{Problèmes rencontrés}
 		Puisque nous parlons de programmation en C, l'un des principaux problèmes est bien évidemment la gestion manuelle de la mémoire. Les \textit{segmentation faults} furent nombreux au cours du développement et parfois difficiles à règler. Par exemple, l'expansion d'arguments a momentanément posé problème puisqu'il fallait pouvoir prédire correctement le nombre de chaines de caractères(\textit{char*}) à allouer, et donc le nombre de jetons composant la commande après l'expansion des ``métacaractères'' comme l'astérique, et aussi remplacer en mémoire l'astérisque par les noms des fichiers et dossiers présents dans le répertoire courant(excluant ceux commençant par '.'). 
 
-		L'autre problème concerne notre connaissance des fonctions POSIX. En effet, comme nous n'étions pas en connaissance de ces fonctions et de leur fonctionnement, nous avons dû nous documenter sur leur fonctionnement. Dans les premières versions de notre code, nous ne connaissions pas toutes les fonctions de la famille \textit{exec} et avons donc commencé à développer des fonctions pour \textit{parser} le contenu de la variable d'environnement \textit{PATH}. Nous avons compris comment utiliser les fonctions de gestions de \textit{file descriptors} d'une façon similaire, en consultant les pages de manuel des fonctions appropriées, ainsi qu'en consultant ``stackoverflow''. Ces fonctions se sont finalement avérées très simples à utiliser.
+		L'autre problème concerne notre connaissance des fonctions POSIX. En effet, comme nous n'étions pas en connaissance de ces fonctions et de leur fonctionnement, nous avons dû nous documenter sur leur fonctionnement. Dans les premières versions de notre code, nous ne connaissions pas toutes les fonctions de la famille \textit{exec} et avons donc commencé à développer des fonctions pour \textit{parser} le contenu de la variable d'environnement \textit{PATH}. Nous avons compris comment utiliser les fonctions de gestions de \textit{file descriptors} d'une façon similaire, en consultant les pages de manuel des fonctions appropriées, ainsi qu'en consultant \textit{StackOverflow}. Ces fonctions se sont finalement avérées très simples à utiliser.
 
         \section{Sources}
-        fonction \textit{countDirectoryContent}: http://stackoverflow.com/questions/1121383/counting-the-number-of-files-in-a-directory-using-c
+        fonction \textit{countDirectoryContent}: 
+       À cette fonction, nous avons rajouté la gestion d'erreurs, qui était absente dans la réponse acceptée.
+
+
+        \url{http://stackoverflow.com/questions/1121383/counting-the-number-of-files-in-a-directory-using-c}
         
-        fonction \textit{tokenize}: http://stackoverflow.com/questions/8106765/using-strtok-in-c
+        fonction \textit{tokenize}: 
+        À cette fonction, nous avons rajouté la gestion de l'expansion d'arguments.
+
+
+        \url{http://stackoverflow.com/questions/8106765/using-strtok-in-c}
         
 \end{document}
