@@ -1,7 +1,7 @@
 # Makefile pour CH.  Rien de bien compliqué ici.
 
 # Attention, dans les fichiers Make, les TAB ont une signification très
-# spécifique.  Ne pas remplacer des TABs par des espaces (ou l'inverse).
+# spécifique.  Ne pas remplacer des TABs par des espaces (ou l'inverse).ye
 
 CFLAGS=-Wall
 
