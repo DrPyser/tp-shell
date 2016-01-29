@@ -318,7 +318,6 @@ execCommand (char **args, int in, int out)
   else
     {
       int pid = fork ();
-      global_pid = pid;
 
       if (pid < 0)
 	{
@@ -369,7 +368,7 @@ interrupt_signal_handler (int signum)
   if (signum == SIGINT)
     {
       printf
-	("\nMy job is to stop the command from completing. -Margaret Thatcher\n");
+          ("\nMy job is to stop the command from completing. -Margaret Thatcher\n");
     }
 
 }
